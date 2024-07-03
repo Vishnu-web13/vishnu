@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>View Complaints</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <style>
+      table,
+      th,
+      td {
+        border: 1px solid;
+      }
+    </style>
+  </head>
+  <body style="text-align: center">
+    <nav>
+      <div class="nav-wrapper">
+        <a href="#" class="brand-logo center">Product Complaint</a>
+        <ul id="nav-mobile" class="left hide-on-med-and-down">
+          <li><a href="index.html">Home Page</a></li>
+          <li><a href="View.html">View Complaints</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <h4>View Details And Complaints</h4>
+    <table style="width: 100%" id="dataTable" class="striped">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Number</th>
+          <th>Complaint</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody style="text-align: center"></tbody>
+    </table>
+    <br />
+    <button id="deleteSelected" class="btn red">Delete Selected</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("http://localhost/example-app/public/api/getComplaint")
+          .then((response) => response.json())
+          .then((response) => {
+            console.log("API Response:", response); // Log the data to inspect its structure
+
+            if (response.status === "OK" && Array.isArray(response.data)) {
+              const tableBody = document.querySelector("#dataTable tbody");
+              response.data.forEach((complaint) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                              <td><label><input type="checkbox" class="filled-in" data-id="${
+                                complaint.id
+                              }"><span></span></label></td>
+                              <td>${complaint.first_name || "N/A"}</td>
+                              <td>${complaint.last_name || "N/A"}</td>
+                              <td>${complaint.number || "N/A"}</td>
+                              <td>${complaint.complaint || "N/A"}</td>
+                              <td><button class="btn red delete-btn" data-id="${
+                                complaint.id
+                              }">Delete</button></td>
+                          `;
+                tableBody.appendChild(row);
+              });
+
+              // Attach event listener for individual delete buttons
+              document.querySelectorAll(".delete-btn").forEach((button) => {
+                button.addEventListener("click", function () {
+                  const id = this.getAttribute("data-id");
+                  deleteComplaint(id);
+                });
+              });
+
+              // Attach event listener for delete selected button
+              document
+                .getElementById("deleteSelected")
+                .addEventListener("click", function () {
+                  const selectedIds = Array.from(
+                    document.querySelectorAll('input[type="checkbox"]:checked')
+                  ).map((checkbox) => checkbox.getAttribute("data-id"));
+                  if (selectedIds.length > 0) {
+                    deleteMultipleComplaints(selectedIds);
+                  } else {
+                    alert("Please select at least one complaint to delete.");
+                  }
+                });
+            } else {
+              console.error("Unexpected API response:", response);
+            }
+          })
+          .catch((error) => console.error("Error fetching data:", error));
+      });
+
+      function deleteComplaint(id) {
+        fetch(`http://localhost/example-app/public/api/deleteComplaint/${id}`, {
+          method: "DELETE",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === "OK") {
+              document
+                .querySelector(`button[data-id="${id}"]`)
+                .closest("tr")
+                .remove();
+            } else {
+              console.error("Error deleting complaint:", data);
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      function deleteMultipleComplaints(ids) {
+        fetch(
+          "http://localhost/example-app/public/api/deleteMultipleComplaints",
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ids: ids }),
+          }
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === "OK") {
+              ids.forEach((id) => {
+                document
+                  .querySelector(`input[data-id="${id}"]`)
+                  .closest("tr")
+                  .remove();
+              });
+            } else {
+              console.error("Error deleting complaints:", data);
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+    </script>
+  </body>
+</html>
